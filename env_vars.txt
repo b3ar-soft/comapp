@@ -1,0 +1,2 @@
+DBUSER=comapp
+DBPASSWORD=123

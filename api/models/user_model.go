@@ -3,11 +3,9 @@ package models
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
-	"github.com/go-pg/pg/v9"
-	"github.com/go-pg/pg/v9/orm"
+	"comuniapp/config"
 )
 
 type User struct {
@@ -25,11 +23,7 @@ func (u User) String() string {
 }
 
 func (u User) Insert() error {
-	db := pg.Connect(&pg.Options{
-		User:     os.Getenv("DBUser"),
-		Password: os.Getenv("DBDBPASS"),
-	})
-	defer db.Close()
+	db := config.GetDbConnection()
 	err := db.Insert(u)
 	if err != nil {
 		log.Fatalf("Error al insertar al usuario %s.\n%v", u, err)
@@ -38,13 +32,47 @@ func (u User) Insert() error {
 	return nil
 }
 
-func createSchema(db *pg.DB) error {
-	for _, model := range []interface{}{(*User)(nil)} {
-		err := db.CreateTable(model, &orm.CreateTableOptions{Temp: false})
-		if err != nil {
-			log.Fatalf("Error al crear la tabla de usuario.\n%v", err)
-			return err
-		}
+func GetAllUsers() ([]User, error) {
+	var users []User
+	db := config.GetDbConnection()
+	err := db.Model(&users).Select()
+	if err != nil {
+		log.Fatalf("Erro al conseguir la lista de usuarios.\n%v", err)
+		return nil, err
+	}
+	return users, nil
+}
+
+func GetUserById(id int64) (*User, error) {
+	user := &User{ID: id}
+	db := config.GetDbConnection()
+	err := db.Select(user)
+	if err != nil {
+		log.Fatalf("Error al encontrar el usuario con id: %d.\n%v", id, err)
+		return nil, err
+	}
+	return user, nil
+}
+
+func (u User) Update() error {
+	db := config.GetDbConnection()
+	u.ModifyDateTime = time.Now()
+	err := db.Update(u)
+	if err != nil {
+		log.Fatalf("Error al modificar el usuario %s.\n%v", u, err)
+		return err
+	}
+	return nil
+}
+
+func (u User) Delete() error {
+	db := config.GetDbConnection()
+	u.Active = false
+	u.ModifyDateTime = time.Now()
+	err := db.Update(u)
+	if err != nil {
+		log.Fatalf("Error al eliminar al usuario %s.\n%v", u, err)
+		return err
 	}
 	return nil
 }
